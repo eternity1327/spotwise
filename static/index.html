@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <title>Tambay — study spots on a budget</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="overlay">
+    <form id="search" class="search">
+      <span class="search-icon">🔍</span>
+      <input id="search-input" type="search" placeholder="Search a school, mall or area" autocomplete="off">
+      <button type="button" id="locate" class="round" title="Go to my location">📍</button>
+    </form>
+    <div class="chips">
+      <label><input type="checkbox" data-filter="wifi">📶 Wi-Fi</label>
+      <label><input type="checkbox" data-filter="outlets">🔌 Outlets</label>
+      <label><input type="checkbox" data-filter="quiet">🤫 Quiet</label>
+      <label><input type="checkbox" data-filter="free">🆓 Free</label>
+    </div>
+  </div>
+
+  <aside id="sheet" class="sheet">
+    <button id="handle" class="handle" aria-label="Show or hide panel"></button>
+    <header class="brand">
+      <div class="logo">T</div>
+      <div>
+        <h1>Tambay</h1>
+        <p>Study spots that fit your budget</p>
+      </div>
+    </header>
+    <nav class="tabs">
+      <button class="tab active" data-tab="spots">Spots</button>
+      <button class="tab" data-tab="budget">Budget</button>
+    </nav>
+
+    <section id="spots-panel" class="panel">
+      <div class="legend">
+        <span><i style="background:#b45309"></i>Café</span>
+        <span><i style="background:#4338ca"></i>Library</span>
+        <span><i style="background:#dc2626"></i>Fast food</span>
+        <span><i style="background:#0891b2"></i>Coworking</span>
+      </div>
+      <ul id="spots" class="spot-list"></ul>
+      <p id="empty" class="empty">No study spots shared yet.<br>Tap <b>+ Add spot</b> or a dot on the map to share one.</p>
+    </section>
+
+    <section id="budget-panel" class="panel" hidden>
+      <div class="budget-card">
+        <label class="budget-input">Weekly budget <span>₱ <input type="number" id="budget" min="0"></span></label>
+        <div class="bar"><div id="bar-fill"></div></div>
+        <div class="stats">
+          <div><small>Spent</small><strong>₱<span id="spent">0</span></strong></div>
+          <div><small>Left</small><strong>₱<span id="left">0</span></strong></div>
+        </div>
+      </div>
+      <h3 class="section-title">This week's sessions</h3>
+      <ul id="log" class="log"></ul>
+      <p id="log-empty" class="empty">Open a spot and tap <b>Log session</b> to track spending.</p>
+    </section>
+  </aside>
+
+  <button id="add" class="fab">+ Add spot</button>
+  <div id="toast" class="toast" hidden></div>
+
+  <dialog id="spot-dialog">
+    <form method="dialog" id="spot-form">
+      <h2>Share a study spot</h2>
+      <label class="photo-picker">
+        <img id="photo-preview" alt="" hidden>
+        <span id="photo-label">📷 Add a photo</span>
+        <input type="file" id="photo" accept="image/*" hidden>
+      </label>
+      <input name="name" placeholder="Name of the place" maxlength="80" required>
+      <input name="cost" type="number" min="0" placeholder="Minimum spend ₱ (0 if free)" required>
+      <div class="chips">
+        <label><input type="checkbox" name="wifi">📶 Wi-Fi</label>
+        <label><input type="checkbox" name="outlets">🔌 Outlets</label>
+        <label><input type="checkbox" name="quiet">🤫 Quiet</label>
+      </div>
+      <menu>
+        <button value="cancel" formnovalidate>Cancel</button>
+        <button value="save" class="primary">Save spot</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
