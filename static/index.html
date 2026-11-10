@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#0f766e">
-  <title>Tambay — study spots on a budget</title>
+  <title>Spotwise — study spots on a budget</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,9 +31,9 @@
   <aside id="sheet" class="sheet">
     <button id="handle" class="handle" aria-label="Show or hide panel"></button>
     <header class="brand">
-      <div class="logo">T</div>
+      <div class="logo">S</div>
       <div>
-        <h1>Tambay</h1>
+        <h1>Spotwise</h1>
         <p>Study spots that fit your budget</p>
       </div>
     </header>
@@ -55,11 +55,11 @@
 
     <section id="budget-panel" class="panel" hidden>
       <div class="budget-card">
-        <label class="budget-input">Weekly budget <span>₱ <input type="number" id="budget" min="0"></span></label>
+        <label class="budget-input">Weekly budget <span><select id="currency" aria-label="Currency"></select><input type="number" id="budget" min="0"></span></label>
         <div class="bar"><div id="bar-fill"></div></div>
         <div class="stats">
-          <div><small>Spent</small><strong>₱<span id="spent">0</span></strong></div>
-          <div><small>Left</small><strong>₱<span id="left">0</span></strong></div>
+          <div><small>Spent</small><strong id="spent">0</strong></div>
+          <div><small>Left</small><strong id="left">0</strong></div>
         </div>
       </div>
       <h3 class="section-title">This week's sessions</h3>
@@ -80,7 +80,7 @@
         <input type="file" id="photo" accept="image/*" hidden>
       </label>
       <input name="name" placeholder="Name of the place" maxlength="80" required>
-      <input name="cost" type="number" min="0" placeholder="Minimum spend ₱ (0 if free)" required>
+      <input name="cost" type="number" min="0" placeholder="Minimum spend (0 if free)" required>
       <div class="chips">
         <label><input type="checkbox" name="wifi">📶 Wi-Fi</label>
         <label><input type="checkbox" name="outlets">🔌 Outlets</label>

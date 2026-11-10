@@ -362,6 +362,25 @@ button.primary {
   font-weight: 600;
 }
 
+.budget-input span {
+  display: flex;
+  gap: 6px;
+}
+
+.budget-input select {
+  padding: 6px 4px;
+  border: none;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.2);
+  color: white;
+  font: inherit;
+  font-weight: 700;
+}
+
+.budget-input select option {
+  color: var(--text);
+}
+
 .budget-input input {
   width: 90px;
   padding: 6px 10px;

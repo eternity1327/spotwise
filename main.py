@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 BASE_DIR = Path(__file__).parent
-DB_PATH = BASE_DIR / "tambay.db"
+DB_PATH = BASE_DIR / "spotwise.db"
 
 app = FastAPI()
 

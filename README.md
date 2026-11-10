@@ -1,13 +1,13 @@
-# Tambay
+# Spotwise
 
-Find cheap, student-friendly study spots in the Philippines and track what you spend on them.
+Find cheap, student-friendly study spots anywhere in the world and track what you spend on them.
 
 ## Features
 
-- Map of study spots shared by students, with price, Wi-Fi, outlets and noise tags
+- Map of study spots shared by students, with minimum spend, Wi-Fi, outlets and noise tags
 - Nearby cafés, libraries, fast-food places and coworking spaces from OpenStreetMap
 - Search that finds the nearest match first
-- Photos, directions and a weekly study budget tracker
+- Photos, directions and a weekly study budget in your local currency
 
 ## Run locally
 

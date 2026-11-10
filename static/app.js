@@ -24,15 +24,24 @@ let userLatLng = null;
 let searchMarker = null;
 const spotMarkers = new Map();
 
-const PH_BOUNDS = [[4.2, 116.0], [21.5, 127.0]];
-const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search?format=json&limit=10&countrycodes=ph&extratags=1";
+const NOMINATIM_URL = "https://nominatim.openstreetmap.org/search?format=json&limit=10&extratags=1";
+const EURO = ["AT", "BE", "CY", "DE", "EE", "ES", "FI", "FR", "GR", "HR", "IE", "IT", "LT", "LU", "LV", "MT", "NL", "PT", "SI", "SK"];
+const CURRENCIES = {
+  PH: "₱", US: "$", CA: "$", AU: "$", NZ: "$", SG: "$", HK: "$", MX: "$", GB: "£", IN: "₹", JP: "¥", CN: "¥",
+  KR: "₩", ID: "Rp", MY: "RM", TH: "฿", VN: "₫", NG: "₦", BR: "R$", ZA: "R", KE: "KSh", PK: "Rs", BD: "৳",
+  TR: "₺", PL: "zł", UA: "₴", AE: "AED ", SA: "SAR ", EG: "E£"
+};
+const SYMBOLS = ["$", "€", "£", "₱", "₹", "¥", "₩", "Rp", "RM", "฿", "₫", "₦", "R$", "R", "KSh", "Rs", "৳", "₺", "zł", "₴", "AED ", "SAR ", "E£"];
 
-const map = L.map("map", {
-  zoomControl: false,
-  minZoom: 6,
-  maxBounds: PH_BOUNDS,
-  maxBoundsViscosity: 1
-}).setView([14.5995, 120.9842], 16);
+function guessCurrency() {
+  const region = new Intl.Locale(navigator.language).maximize().region;
+  return EURO.includes(region) ? "€" : CURRENCIES[region] ?? "$";
+}
+
+let currency = load("currency", guessCurrency());
+const money = amount => `${currency}${amount}`;
+
+const map = L.map("map", { zoomControl: false, minZoom: 3, worldCopyJump: true }).setView([20, 0], 3);
 L.control.zoom({ position: "topright" }).addTo(map);
 L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "© OpenStreetMap contributors",
@@ -81,7 +90,7 @@ function hideToast() {
 }
 
 function costLabel(cost) {
-  return cost === 0 ? "Free" : `₱${cost}`;
+  return cost === 0 ? "Free" : money(cost);
 }
 
 function tagRow(spot) {
@@ -248,7 +257,7 @@ function logSession(spot) {
   log.push({ spot: spot.name, amount, time: Date.now() });
   save("log", log);
   renderBudget();
-  showToast(`Logged ₱${amount} at ${spot.name}`, 2500);
+  showToast(`Logged ${money(amount)} at ${spot.name}`, 2500);
 }
 
 function renderBudget() {
@@ -257,9 +266,9 @@ function renderBudget() {
   const spent = thisWeek.reduce((total, entry) => total + entry.amount, 0);
   const over = spent > budget;
 
-  $("spent").textContent = spent;
-  $("left").textContent = budget - spent;
-  $("left").parentElement.classList.toggle("over", over);
+  $("spent").textContent = money(spent);
+  $("left").textContent = money(budget - spent);
+  $("left").classList.toggle("over", over);
   $("bar-fill").style.width = `${Math.min(100, budget ? (spent / budget) * 100 : 100)}%`;
   $("bar-fill").classList.toggle("over", over);
 
@@ -267,7 +276,7 @@ function renderBudget() {
     const item = el("li");
     const name = el("div", "", entry.spot);
     name.append(el("small", "", new Date(entry.time).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })));
-    item.append(name, el("strong", "", `₱${entry.amount}`));
+    item.append(name, el("strong", "", money(entry.amount)));
     return item;
   });
   $("log").replaceChildren(...items);
@@ -391,7 +400,7 @@ async function searchPlace(event) {
   if (!query) return;
   const center = userLatLng ?? map.getCenter();
   const result = (await findNearest(query, center)) ?? (await fetchPlaces(query))[0];
-  if (!result) return showToast("Place not found in the Philippines", 2500);
+  if (!result) return showToast("Place not found", 2500);
   $("search-input").blur();
   showSearchResult(result);
 }
@@ -427,6 +436,19 @@ document.querySelectorAll(".tab").forEach(tab => {
 });
 
 document.querySelectorAll("[data-filter]").forEach(box => box.addEventListener("change", renderSpots));
+
+$("currency").replaceChildren(...[...new Set([currency, ...SYMBOLS])].map(symbol => {
+  const option = el("option", "", symbol.trim());
+  option.value = symbol;
+  return option;
+}));
+$("currency").value = currency;
+$("currency").addEventListener("change", () => {
+  currency = $("currency").value;
+  save("currency", currency);
+  renderSpots();
+  renderBudget();
+});
 
 $("budget").addEventListener("input", () => {
   save("budget", Number($("budget").value));
