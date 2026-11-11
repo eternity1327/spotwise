@@ -459,7 +459,8 @@ button.primary {
   transition: bottom 0.3s ease, background 0.15s;
 }
 
-.sheet-open .fab {
+.sheet-open .fab,
+.popup-open .fab {
   opacity: 0;
   pointer-events: none;
 }
@@ -634,6 +635,18 @@ menu {
   font-size: 0.85rem;
 }
 
+.popup .report {
+  align-self: center;
+  margin-top: 2px;
+  padding: 4px 6px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-decoration: underline;
+}
+
 .popup a.button {
   color: var(--text);
 }
@@ -673,7 +686,8 @@ menu {
   }
 
   .fab,
-  .sheet-open .fab {
+  .sheet-open .fab,
+  .popup-open .fab {
     bottom: 28px;
     right: 28px;
     opacity: 1;

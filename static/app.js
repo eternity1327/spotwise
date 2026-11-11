@@ -54,6 +54,8 @@ function guessCurrency() {
 }
 
 let currency = load("currency", guessCurrency());
+const reporterId = load("reporter", null) ?? crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+save("reporter", reporterId);
 function money(amount) {
   const text = Math.abs(amount).toLocaleString(undefined, { maximumFractionDigits: 2 });
   return `${amount < 0 ? "-" : ""}${currency}${text}`;
@@ -123,20 +125,26 @@ function directionsUrl(lat, lng) {
   return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 }
 
+function photoUrl(spot) {
+  return `/api/spots/${spot.id}/photo`;
+}
+
 function spotPopup(spot) {
   const card = el("div", "popup");
-  if (spot.photo) card.append(image(spot.photo, "popup-photo"));
+  if (spot.has_photo) card.append(image(photoUrl(spot), "popup-photo"));
   const logButton = el("button", "primary", "Log session");
   logButton.onclick = () => logSession(spot);
   const actions = el("div", "actions");
   actions.append(logButton, link("Directions", directionsUrl(spot.lat, spot.lng)));
-  card.append(el("span", "badge", costLabel(spot.cost)), el("h3", "", spot.name), tagRow(spot), actions);
+  const reportButton = el("button", "report", "Report a problem");
+  reportButton.onclick = () => reportSpot(spot);
+  card.append(el("span", "badge", costLabel(spot.cost)), el("h3", "", spot.name), tagRow(spot), actions, reportButton);
   return card;
 }
 
 function spotItem(spot) {
   const item = el("li", "spot");
-  const thumb = spot.photo ? image(spot.photo, "thumb") : el("div", "thumb placeholder", "📚");
+  const thumb = spot.has_photo ? image(photoUrl(spot), "thumb") : el("div", "thumb placeholder", "📚");
   const info = el("div", "info");
   info.append(el("h4", "", spot.name), el("span", "badge", costLabel(spot.cost)), tagRow(spot));
   item.append(thumb, info);
@@ -277,6 +285,22 @@ async function addSpot(spot) {
   spots.push(await response.json());
   renderSpots();
   showToast("Spot shared. Thanks! 🎉", 2500);
+}
+
+async function reportSpot(spot) {
+  if (!confirm(`Report "${spot.name}" as wrong or inappropriate?`)) return;
+  try {
+    const response = await fetch(`/api/spots/${spot.id}/report`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reporter: reporterId })
+    });
+    if (!response.ok) throw new Error(response.status);
+    map.closePopup();
+    showToast("Thanks for the report. We'll take a look.", 3000);
+  } catch {
+    showToast("Couldn't send the report. Try again later.", 3000);
+  }
 }
 
 function logSession(spot) {
@@ -453,8 +477,14 @@ map.on("moveend", () => {
   renderList();
   schedulePlaces();
 });
-map.on("popupopen", () => (popupOpen = true));
-map.on("popupclose", () => (popupOpen = false));
+map.on("popupopen", () => {
+  popupOpen = true;
+  document.body.classList.add("popup-open");
+});
+map.on("popupclose", () => {
+  popupOpen = false;
+  document.body.classList.remove("popup-open");
+});
 map.on("locationfound", event => {
   userLatLng = event.latlng;
   youMarker?.remove();
