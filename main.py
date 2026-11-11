@@ -1,9 +1,10 @@
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 BASE_DIR = Path(__file__).parent
 DB_PATH = BASE_DIR / "spotwise.db"
@@ -12,8 +13,10 @@ app = FastAPI()
 
 
 class Spot(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     name: str = Field(min_length=1, max_length=80)
-    cost: int = Field(ge=0)
+    cost: int = Field(ge=0, le=100_000_000)
     wifi: bool
     outlets: bool
     quiet: bool
@@ -29,7 +32,7 @@ def connect():
 
 
 def create_table():
-    with connect() as conn:
+    with closing(connect()) as conn, conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS spots (
                 id INTEGER PRIMARY KEY,
@@ -57,14 +60,14 @@ def to_dict(row):
 
 @app.get("/api/spots")
 def list_spots():
-    with connect() as conn:
+    with closing(connect()) as conn:
         rows = conn.execute("SELECT * FROM spots").fetchall()
     return [to_dict(row) for row in rows]
 
 
 @app.post("/api/spots", status_code=201)
 def add_spot(spot: Spot):
-    with connect() as conn:
+    with closing(connect()) as conn, conn:
         cursor = conn.execute(
             "INSERT INTO spots (name, cost, wifi, outlets, quiet, lat, lng, photo) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (spot.name, spot.cost, spot.wifi, spot.outlets, spot.quiet, spot.lat, spot.lng, spot.photo),

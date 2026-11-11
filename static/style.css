@@ -460,7 +460,8 @@ button.primary {
 }
 
 .sheet-open .fab {
-  bottom: calc(70dvh + 16px);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .fab.cancel {
@@ -675,6 +676,8 @@ menu {
   .sheet-open .fab {
     bottom: 28px;
     right: 28px;
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .toast {

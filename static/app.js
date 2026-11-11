@@ -8,11 +8,26 @@ const PLACE_TYPES = {
 };
 
 const $ = id => document.getElementById(id);
-const load = (key, fallback) => JSON.parse(localStorage.getItem(key)) ?? fallback;
-const save = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+const POPUP = { minWidth: 240, autoPanPaddingTopLeft: [16, 150], autoPanPaddingBottomRight: [16, 24] };
+
+function load(key, fallback) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function save(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    showToast("Couldn't save on this device.", 2500);
+  }
+}
 
 let spots = [];
-let log = load("log", []);
+let log = [load("log", [])].flat().filter(entry => Number.isFinite(entry?.amount) && Number.isFinite(entry?.time));
 let pendingLatLng = null;
 let photoData = null;
 let addMode = false;
@@ -39,7 +54,10 @@ function guessCurrency() {
 }
 
 let currency = load("currency", guessCurrency());
-const money = amount => `${currency}${amount}`;
+function money(amount) {
+  const text = Math.abs(amount).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return `${amount < 0 ? "-" : ""}${currency}${text}`;
+}
 
 const map = L.map("map", { zoomControl: false, minZoom: 3, worldCopyJump: true }).setView([20, 0], 3);
 L.control.zoom({ position: "topright" }).addTo(map);
@@ -144,7 +162,7 @@ function renderMarkers() {
   spotMarkers.clear();
   visibleSpots().forEach(spot => {
     const marker = L.marker([spot.lat, spot.lng], { icon: pinIcon(spot), zIndexOffset: 1000 })
-      .bindPopup(() => spotPopup(spot), { minWidth: 240 })
+      .bindPopup(() => spotPopup(spot), POPUP)
       .addTo(spotLayer);
     spotMarkers.set(spot.id, marker);
   });
@@ -195,7 +213,7 @@ function addPlace(element) {
   const lng = element.lon ?? element.center.lon;
   const { color } = PLACE_TYPES[element.tags.amenity];
   L.circleMarker([lat, lng], { radius: 7, color: "#fff", weight: 2, fillColor: color, fillOpacity: 1 })
-    .bindPopup(() => placePopup(element.tags, lat, lng), { minWidth: 220 })
+    .bindPopup(() => placePopup(element.tags, lat, lng), { ...POPUP, minWidth: 220 })
     .bindTooltip(element.tags.name, { direction: "top", offset: [0, -8] })
     .addTo(placeLayer);
 }
@@ -234,26 +252,38 @@ function schedulePlaces() {
 }
 
 async function loadSpots() {
-  const response = await fetch("/api/spots");
-  spots = await response.json();
-  renderSpots();
+  try {
+    const response = await fetch("/api/spots");
+    if (!response.ok) throw new Error(response.status);
+    spots = await response.json();
+    renderSpots();
+  } catch {
+    showToast("Couldn't load spots. Try refreshing the page.", 4000);
+  }
 }
 
 async function addSpot(spot) {
-  const response = await fetch("/api/spots", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(spot)
-  });
-  if (!response.ok) return showToast("Could not save the spot.", 3000);
+  let response;
+  try {
+    response = await fetch("/api/spots", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(spot)
+    });
+  } catch {
+    return showToast("Couldn't reach the server. Check your connection and try again.", 3500);
+  }
+  if (!response.ok) return showToast("Could not save the spot. Check the name and price.", 3500);
   spots.push(await response.json());
   renderSpots();
   showToast("Spot shared. Thanks! 🎉", 2500);
 }
 
 function logSession(spot) {
-  const amount = Number(prompt(`How much did you spend at ${spot.name}?`, spot.cost));
-  if (Number.isNaN(amount) || amount < 0) return;
+  const answer = prompt(`How much did you spend at ${spot.name}?`, spot.cost);
+  if (answer === null || answer.trim() === "") return;
+  const amount = Math.round(Number(answer) * 100) / 100;
+  if (!Number.isFinite(amount) || amount < 0) return showToast("Enter an amount like 120", 2500);
   log.push({ spot: spot.name, amount, time: Date.now() });
   save("log", log);
   renderBudget();
@@ -269,7 +299,8 @@ function renderBudget() {
   $("spent").textContent = money(spent);
   $("left").textContent = money(budget - spent);
   $("left").classList.toggle("over", over);
-  $("bar-fill").style.width = `${Math.min(100, budget ? (spent / budget) * 100 : 100)}%`;
+  const used = budget > 0 ? (spent / budget) * 100 : spent > 0 ? 100 : 0;
+  $("bar-fill").style.width = `${Math.min(100, used)}%`;
   $("bar-fill").classList.toggle("over", over);
 
   const items = thisWeek.slice().reverse().map(entry => {
@@ -314,8 +345,12 @@ function openDialog(latlng, name = "") {
 }
 
 function resizeImage(file) {
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     const picture = new Image();
+    picture.onerror = () => {
+      URL.revokeObjectURL(picture.src);
+      reject(new Error("unsupported image"));
+    };
     picture.onload = () => {
       const scale = Math.min(1, 800 / Math.max(picture.width, picture.height));
       const canvas = document.createElement("canvas");
@@ -350,7 +385,8 @@ function placeName(result) {
 }
 
 function placeType(result) {
-  const type = result.type.replaceAll("_", " ");
+  const raw = !result.type || result.type === "yes" ? result.class ?? "place" : result.type;
+  const type = raw.replaceAll("_", " ");
   return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
@@ -388,7 +424,7 @@ function showSearchResult(result) {
   const icon = L.divIcon({ className: "pin-anchor", iconSize: [0, 0], html: el("div", "pin search", `📍 ${placeName(result)}`).outerHTML });
   searchMarker?.remove();
   searchMarker = L.marker(latlng, { icon, zIndexOffset: 2000 })
-    .bindPopup(() => searchPopup(result, latlng), { minWidth: 240, offset: [0, -30] })
+    .bindPopup(() => searchPopup(result, latlng), { ...POPUP, offset: [0, -30] })
     .addTo(map);
   map.once("moveend", () => searchMarker.openPopup());
   map.flyTo(latlng, 17);
@@ -399,14 +435,19 @@ async function searchPlace(event) {
   const query = $("search-input").value.trim();
   if (!query) return;
   const center = userLatLng ?? map.getCenter();
-  const result = (await findNearest(query, center)) ?? (await fetchPlaces(query))[0];
+  let result;
+  try {
+    result = (await findNearest(query, center)) ?? (await fetchPlaces(query))[0];
+  } catch {
+    return showToast("Search isn't available right now. Try again in a bit.", 3000);
+  }
   if (!result) return showToast("Place not found", 2500);
   $("search-input").blur();
   showSearchResult(result);
 }
 
 map.on("click", event => {
-  if (addMode) openDialog(event.latlng);
+  if (addMode) openDialog(event.latlng.wrap());
 });
 map.on("moveend", () => {
   renderList();
@@ -425,6 +466,7 @@ $("search").addEventListener("submit", searchPlace);
 $("locate").onclick = () => map.locate({ setView: true, maxZoom: 17 });
 $("add").onclick = () => setAddMode(!addMode);
 $("handle").onclick = () => setSheet(!$("sheet").classList.contains("open"));
+$("cancel-spot").onclick = () => dialog.close("cancel");
 
 document.querySelectorAll(".tab").forEach(tab => {
   tab.addEventListener("click", () => {
@@ -458,7 +500,12 @@ $("budget").addEventListener("input", () => {
 $("photo").addEventListener("change", async event => {
   const [file] = event.target.files;
   if (!file) return;
-  photoData = await resizeImage(file);
+  try {
+    photoData = await resizeImage(file);
+  } catch {
+    event.target.value = "";
+    return showToast("That photo type isn't supported. Try a JPG or PNG.", 3000);
+  }
   $("photo-preview").src = photoData;
   $("photo-preview").hidden = false;
   $("photo-label").hidden = true;
